@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Maps reads to the transcripts divided into bins strandedly.
 # Have the BAM files and the gene list in the current directory.
 
 echo Loading bedtools
