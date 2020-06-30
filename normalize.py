@@ -1,5 +1,5 @@
 """
-Normalizes the read counts using RPM.
+Normalizes the read counts using RKPM.
 """
 
 sample_list = [
@@ -22,7 +22,7 @@ for i in range(len(sample_list)):
         normalized = sample_list[i][:-4] + "_normalized.txt"
         for line in f:
             line = line.strip().split()
-            line[7] = str(int(line[7]) * normalization_factors[i])
+            line[7] = str( (int(line[7]) * normalization_factors[i]) / ( int(line[2]) - int(line[1]) ) )
             line = "\t".join(line) + "\n"
             with open(normalized, "a") as d:
                 d.write(line)
