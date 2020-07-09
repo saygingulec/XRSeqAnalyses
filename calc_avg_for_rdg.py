@@ -1,6 +1,6 @@
 from statistics import mean
 
-number_of_bins = 140
+number_of_bins = 150
 sample_list = [
     "Experiment1_Sample1_trimmed_sorted_NTS.txt",
     "Experiment1_Sample2_trimmed_sorted_TS.txt",
