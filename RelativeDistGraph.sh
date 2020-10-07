@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Maps reads to the transcripts divided into bins strandedly.
 # Have the BAM files and the gene list in the current directory.
 
 echo Loading bedtools
@@ -22,6 +21,6 @@ done
 read -s -p $'Press enter to continue.\n'
 
 for sample in ${samples[@]}; do
-  bedtools intersect -c -a "${genelist}" -b "${sample}" -wa -S -F 0.5 > "${sample%.bam}"_TS.txt
-  bedtools intersect -c -a "${genelist}" -b "${sample}" -wa -s -F 0.5 > "${sample%.bam}"_NTS.txt
+  bedtools intersect -c -a "${genelist}" -b "${sample}" -wa -S -F 0.5 > "${sample%_trimmed_sorted.bam}"_TS.txt
+  bedtools intersect -c -a "${genelist}" -b "${sample}" -wa -s -F 0.5 > "${sample%_trimmed_sorted.bam}"_NTS.txt
 done
