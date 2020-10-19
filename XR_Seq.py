@@ -6,7 +6,7 @@ from Bio import SeqIO
 import requests
 import string
 
-if version_info[1] <= 6:
+if version_info[1] < 6:
     raise Exception('Use at least Python 3.6!')
 
 parser = argparse.ArgumentParser(description='Performs the Python half of the XR-Seq analysis.')
@@ -72,7 +72,7 @@ def rpkm(sample_list):
         intersect_list.append(name + '_TS.bed')
 
     normalization_factors = {}
-    with open('total_mapped_reads.txt') as f:
+    with open('results/total_mapped_reads.txt') as f:
         for line in f:
             normalization_factors[line.strip().split()[1][:-19]] = 10 ** 9 / int(line.strip().split()[0])
 

@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Starting with compressed samples (sample.fastq.gz), performs XR-Seq analysis.
-
-echo This script prepares compressed samples for XR-Seq analysis by creating \
-     sorted and filtered bed files.
-read -r -s -p $'Press enter to continue.\n'
-
 # Modules
 
 echo Loading modules
@@ -14,7 +8,7 @@ echo Loading Bowtie2
 module load bowtie2
 
 echo Loading Cutadapt
-module load cutadapt
+module load cutadapt/2.9
 
 echo Loading fastx
 module load fastx_toolkit/0.0.14
@@ -27,6 +21,9 @@ module load bedtools
 
 echo Loading UCSCtools
 module load ucsctools/320
+
+echo Loading Python 3.6.6
+module load python/3.6.6
 
 
 # Setting up directories
@@ -82,19 +79,19 @@ done
 # Convert to sorted BAM
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --mem=16000 --dependency=singleton --job-name="${SAMPLE}" --wrap="samtools sort -o ${SAMPLE}_trimmed_sorted.bam ${SAMPLE}_trimmed.sam"
+  sbatch --mem=16g --dependency=singleton --job-name="${SAMPLE}" --wrap="samtools sort -o ${SAMPLE}_trimmed_sorted.bam ${SAMPLE}_trimmed.sam"
 done
 
 
 # Generate TS and NTS read counts
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -s -F 0.5 > ${SAMPLE}_NTS.bed"
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -S -F 0.5 > ${SAMPLE}_TS.bed"
+  sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -s -F 0.5 > ${SAMPLE}_NTS.bed"
+  sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -S -F 0.5 > ${SAMPLE}_TS.bed"
 done
 
 
-# Convert to BAD
+# Convert to BED
 
 for SAMPLE in "${SAMPLES[@]}"; do
   sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools bamtobed -i ${SAMPLE}_trimmed_sorted.bam > ${SAMPLE}_trimmed_sorted.bed"
@@ -112,16 +109,24 @@ done
 # Generate BedGraph files
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_trimmed_sorted_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_trimmed_sorted_plus.bedGraph"
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_trimmed_sorted_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_trimmed_sorted_minus.bedGraph"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_trimmed_sorted_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_trimmed_sorted_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
+done
+
+
+# Sort BedGraph files
+
+for SAMPLE in "${SAMPLES[@]}"; do
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="sort -k1,1 -k2,2n ${SAMPLE}_plus.bedGraph > ${SAMPLE}_plus_sorted.bedGraph"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="sort -k1,1 -k2,2n ${SAMPLE}_minus.bedGraph > ${SAMPLE}_minus_sorted.bedGraph"
 done
 
 
 # Generate BigWig files
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedGraphToBigWig ${SAMPLE}_trimmed_sorted_plus.bedGraph ${GENOME}.fai results/${SAMPLE}_trimmed_sorted_plus.bw"
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedGraphToBigWig ${SAMPLE}_trimmed_sorted_minus.bedGraph ${GENOME}.fai results/${SAMPLE}_trimmed_sorted_minus.bw"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedGraphToBigWig ${SAMPLE}_plus_sorted.bedGraph ${GENOME}.fai results/${SAMPLE}_plus.bw"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedGraphToBigWig ${SAMPLE}_minus_sorted.bedGraph ${GENOME}.fai results/${SAMPLE}_minus.bw"
 done
 
 
