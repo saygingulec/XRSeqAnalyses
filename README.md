@@ -2,7 +2,7 @@
 
 These two scripts allow you to get data for monomer analysis, read length distribution, bigWig and TS-NTS comparison graphs. Each sample is run in parallel to save time.
 
-To make the analysis download XR-Seq.sh and XR-Seq.py. Then you need the Bowtie2Index for alignment, a whole genome fasta for monomer analysis, your samples and your choice of intervals for read counts to be reported.
+To do the analysis download XR-Seq.sh and XR-Seq.py. Then you need the Bowtie2Index for alignment, a whole genome fasta for monomer analysis, your samples and your choice of intervals for read counts to be reported.
 
 Example run:
 
