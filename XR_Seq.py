@@ -41,12 +41,10 @@ class BedLine:
         """
         return "\t".join([str(value) for value in vars(self).values()]) + "\n"
 
-    def sequence(self, assembly=None):
-        if assembly is None:
-            assembly = self.assembly
+    def sequence(self, assembly):
 
         query = {
-            'assembly': assembly,
+            'genome': assembly,
             'chrom': self.chrom,  # might need to change chrom names
             'start': self.start,
             'end': self.end
@@ -79,11 +77,12 @@ def rpkm(sample_list):
     for intersect in intersect_list:
         print("Normalizing " + intersect)
         with open(intersect) as f:
+            sample_name = "_".join(intersect.split('_')[:-1])
+            nf = normalization_factors[sample_name]
             out = intersect[:-4] + "_rpkm.bed"
             for line in f:
                 line = BedLine(line)
-                tx_length = line.end - line.start
-                line.count = (line.count * normalization_factors[intersect.split('_')[-2]]) / tx_length
+                line.count = (line.count * nf) / len(line)
                 with open(out, 'a') as d:
                     d.write(line.bed_line())
 
@@ -95,6 +94,7 @@ def calc_avg(sample_list):
         rpkm_list.append(name + '_TS_rpkm.bed')
 
     for rpkm_file in rpkm_list:
+        print('Averaging ' + rpkm_file)
         with open(rpkm_file) as f:
             bins = {}
             for line in f:
@@ -114,6 +114,8 @@ def calc_avg(sample_list):
 def monomer_analysis(sample_list, desired_lengths=None):
     if desired_lengths is None:
         desired_lengths = list(range(10, 31))
+
+    print('Performing monomer analysis')
 
     fasta_list = []
     for name in sample_list:
@@ -143,15 +145,15 @@ def monomer_analysis(sample_list, desired_lengths=None):
         # Convert numbers to ratios
         for length in dict_of_monomers:
             for pos in dict_of_monomers[length]:
+                count_sum = sum(dict_of_monomers[length][pos].values())
                 for nt, count in dict_of_monomers[length][pos].items():
-                    count_sum = sum(dict_of_monomers[length][pos].values())
                     try:
                         dict_of_monomers[length][pos][nt] = count / count_sum
                     except ZeroDivisionError:
                         dict_of_monomers[length][pos][nt] = 0
 
         # Convert to R data frame and write
-        r_df_name = 'results/' + fasta[:-3] + '_R_df.txt'
+        r_df_name = 'results/' + fasta[:-3] + '_monomer_R_df.txt'
         with open(r_df_name, 'a') as f:
             for length in dict_of_monomers:
                 for pos in dict_of_monomers[length]:

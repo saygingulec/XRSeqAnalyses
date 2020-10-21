@@ -106,6 +106,13 @@ for SAMPLE in "${SAMPLES[@]}"; do
 done
 
 
+# Get fasta for monomer analysis
+
+for SAMPLE in "${SAMPLES[@]}"; do
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools getfasta -s -fi ${GENOME} -bed ${SAMPLE}_trimmed_sorted.bed -fo ${SAMPLE}.fa"
+done
+
+
 # Generate BedGraph files
 
 for SAMPLE in "${SAMPLES[@]}"; do
@@ -134,13 +141,6 @@ done
 
 for SAMPLE in "${SAMPLES[@]}"; do
   sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="awk '{print \$3-\$2}' ${SAMPLE}_trimmed_sorted.bed | sort -k1,1n | uniq -c | sed 's/\s\s*/ /g' | awk '{print \$2\"\t\"\$1}' > results/${SAMPLE}_read_length_distribution.txt"
-done
-
-
-# Get fasta for monomer analysis
-
-for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools getfasta -s -fi ${GENOME} -bed ${SAMPLE}_trimmed_sorted.bed -fo ${SAMPLE}.fa"
 done
 
 
