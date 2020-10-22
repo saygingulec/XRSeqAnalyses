@@ -7,8 +7,6 @@ To do the analysis download XR_Seq.sh and XR_Seq.py. Then you need the Bowtie2In
 Example run:
 
 ```
-This script prepares compressed samples for XR-Seq analysis by creating sorted and filtered bed files.
-Press enter to continue.
 Loading modules
 Loading Bowtie2
      Genome indexes for use with BOWTIE2 are available
