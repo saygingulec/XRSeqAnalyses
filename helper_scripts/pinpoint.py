@@ -2,8 +2,8 @@ from Bio import SeqIO
 
 fasta_in = 'CelWTL1_6-4_1h_ATCACG_S3_L008_R1_001_trimmed_sorted_fltrd.fa'
 bed_out = 'CelWTL1_6-4_1h_ATCACG_S3_L008_R1_001_pinpointed.bed'
-dimers = ['TT', 'TC', 'CT']  # these need to be in uppercase
-position_interval = [5, 10]  # 5-10 bp away from 3' end
+dimers = ['TT', 'TC', 'CT', 'CC']  # these need to be in uppercase
+position_interval = [8, 9]  # 8-9 bp away from 3' end, inclusive
 
 with open(fasta_in) as f:
     with open(bed_out, 'a') as d:
@@ -16,13 +16,13 @@ with open(fasta_in) as f:
 
             seq = record.seq.lower()
             length = len(seq)
-            uppper_boundary = length - position_interval[0]
+            uppper_boundary = length - position_interval[0] + 1
             lower_boundary = length - position_interval[1]
             dimer_found = 0
             poses = []
             for pos, nt in enumerate(seq):
                 if lower_boundary < pos < uppper_boundary:
-                    dimer = nt + seq[pos-1]
+                    dimer = seq[pos-1] + nt
                     if dimer.upper() in dimers:
                         seq = seq[:pos-1] + dimer.upper() + seq[pos + 1:]
                         if strand == '+':
