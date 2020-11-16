@@ -166,13 +166,35 @@ for SAMPLE in "${SAMPLES[@]}"; do
 done
 
 
-# Generate TS and NTS read counts
+# Get fasta for monomer analysis
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -s -F 0.5 > ${SAMPLE}_NTS.bed"
-  sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -S -F 0.5 > ${SAMPLE}_TS.bed"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools getfasta -s -fi ${GENOME} -bed ${SAMPLE}_trimmed_sorted.bed -fo ${SAMPLE}.fa"
 done
 
+
+# Pinpoint damage sites
+
+if [ $PIN == "-p" ]; then
+  for SAMPLE in "${SAMPLES[@]}"; do
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${PIN} ${DIMERS} ${LOWER} ${UPPER}"
+  done
+fi
+
+
+# Generate TS and NTS read counts
+
+if [ $PIN == "-p" ]; then
+  for SAMPLE in "${SAMPLES[@]}"; do
+    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -s -F 0.5 > ${SAMPLE}_NTS.bed"
+    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -S -F 0.5 > ${SAMPLE}_TS.bed"
+  done
+else
+  for SAMPLE in "${SAMPLES[@]}"; do
+    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_pinpointed.bed -wa -s -F 0.5 > ${SAMPLE}_NTS.bed"
+    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_pinpointed.bed -wa -S -F 0.5 > ${SAMPLE}_TS.bed"
+  done
+fi
 
 # Convert to BED
 
@@ -189,19 +211,19 @@ for SAMPLE in "${SAMPLES[@]}"; do
 done
 
 
-# Get fasta for monomer analysis
-
-for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools getfasta -s -fi ${GENOME} -bed ${SAMPLE}_trimmed_sorted.bed -fo ${SAMPLE}.fa"
-done
-
-
 # Generate BedGraph files
 
-for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_trimmed_sorted_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_trimmed_sorted_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
-done
+if [ $PIN == "-p" ]; then
+  for SAMPLE in "${SAMPLES[@]}"; do
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_pinpointed.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_trimmed_sorted_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_pinpointed.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_trimmed_sorted_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
+  done
+else
+  for SAMPLE in "${SAMPLES[@]}"; do
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_trimmed_sorted_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_trimmed_sorted_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
+  done
+fi
 
 
 # Sort BedGraph files
@@ -230,5 +252,5 @@ done
 # Run Python scripts
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${PIN} ${DIMERS} ${LOWER} ${UPPER} ${MON_MIN} ${MON_MAX}"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${MON_MIN} ${MON_MAX}"
 done

@@ -60,10 +60,7 @@ def rpkm(name):
         read_count = int(f.readline().strip())
         nf = 10 ** 9 / read_count
 
-    if args.pinpoint:
-        intersect_list = [name + 'pinpointed_NTS.bed', name + 'pinpointed_TS.bed']
-    else:
-        intersect_list = [name + '_NTS.bed', name + '_TS.bed']
+    intersect_list = [name + '_NTS.bed', name + '_TS.bed']
 
     for intersect in intersect_list:
         print("Normalizing " + intersect)
@@ -78,10 +75,7 @@ def rpkm(name):
 
 def calc_avg(name):
 
-    if args.pinpoint:
-        rpkm_list = [name + 'pinpointed_NTS_rpkm.bed', name + 'pinpointed_TS_rpkm.bed']
-    else:
-        rpkm_list = [name + '_NTS_rpkm.bed', name + '_TS_rpkm.bed']
+    rpkm_list = [name + '_NTS_rpkm.bed', name + '_TS_rpkm.bed']
 
     for rpkm_file in rpkm_list:
         print('Averaging ' + rpkm_file)
@@ -194,8 +188,8 @@ if version_info[1] < 6:
 
 parser = argparse.ArgumentParser(description='Performs the Python half of the XR-Seq analysis.')
 parser.add_argument('-s', '--sample_name', help='name of the sample without extensions')
-parser.add_argument('-m', '--min_length', default=10, help='Minimum oligomer length for monomer analysis.')
-parser.add_argument('-M', '--max_length', default=30, help='Maximum oligomer length for monomer analysis.')
+parser.add_argument('-m', '--min_length', type=int, default=10, help='Minimum oligomer length for monomer analysis.')
+parser.add_argument('-M', '--max_length', type=int, default=30, help='Maximum oligomer length for monomer analysis.')
 parser.add_argument('-p', '--pinpoint', action='store_true', help='Pinpoint damage sites')
 parser.add_argument('-d', '--dimers', help='Dimers to look for while pinpointing. Example: TC,CT Default: TT')
 parser.add_argument('-l', '--lower', default=9, type=int, help="Lower boundary for damage location, n bp away from 3' "
@@ -216,11 +210,20 @@ else:
 
 mon_lenghts = list(range(args.min_length, args.max_length + 1))
 
-for sample in samples:
-    if args.pinpoint:
+if args.pinpoint:
+    for sample in samples:
         pinpoint(sample, args.lower, args.upper, args.dimers)
-    rpkm(sample)
-    with open("results/" + sample + "_NTS_rpkm.bed") as score_test:
-        if type(BedLine(score_test.readline()).score) == int:
-            calc_avg(sample)
+    quit()
+
+for sample in samples:
+    if str(sample + "_pinpointed.bed") in listdir():
+        rpkm(sample + "_pinpointed")
+        with open("results/" + sample + "_NTS_rpkm.bed") as score_test:
+            if type(BedLine(score_test.readline()).score) == int:
+                calc_avg(sample + "_pinpointed")
+    else:
+        rpkm(sample)
+        with open("results/" + sample + "_NTS_rpkm.bed") as score_test:
+            if type(BedLine(score_test.readline()).score) == int:
+                calc_avg(sample)
     monomer_analysis(sample, mon_lenghts)
