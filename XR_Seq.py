@@ -55,7 +55,7 @@ class BedLine:
 
 
 def rpkm(name):
-    read_count_file = name + "_trimmed_sorted_readCount.txt"
+    read_count_file = name + "_readCount.txt"
     with open(read_count_file) as f:
         read_count = int(f.readline().strip())
         nf = 10 ** 9 / read_count
@@ -141,8 +141,29 @@ def monomer_analysis(name, desired_lengths=None):
                     f.write(f'{length}\t{pos}\t{nt}\t{ratio}\n')
 
 
-def pinpoint(name, lower_boundary=8, upper_boundary=9, dimer_list=None):
-    fasta = name + '.fa'
+def filter_by_length(sample_name, min_length=None, max_length=None):
+    bed = sample_name + '_trimmed_sorted.bed'
+    out = sample_name + '_filtered.bed'
+    with open(bed) as f, open(out, 'a') as d:
+        if min_length is not None and max_length is not None:
+            for line in f:
+                if min_length <= len(BedLine(line)) <= max_length:
+                    d.write(line)
+        elif max_length is not None:
+            for line in f:
+                if len(BedLine(line)) <= max_length:
+                    d.write(line)
+        elif min_length is not None:
+            for line in f:
+                if min_length <= len(BedLine(line)):
+                    d.write(line)
+
+
+def pinpoint(name, lower_boundary=9, upper_boundary=8, dimer_list=None):
+    if name + '_filtered.fa' in listdir():
+        fasta = name + '_filtered.fa'
+    else:
+        fasta = name + '.fa'
     out = name + '_pinpointed.bed'
     position_interval = [lower_boundary, upper_boundary]  # 8-9 bp away from 3' end, inclusive
     if dimer_list is None:
@@ -161,12 +182,12 @@ def pinpoint(name, lower_boundary=8, upper_boundary=9, dimer_list=None):
 
             seq = record.seq.lower()
             length = len(seq)
-            uppper_boundary = length - position_interval[0] + 1
-            lower_boundary = length - position_interval[1]
+            lower_boundary = length - position_interval[0]
+            upper_boundary = length - position_interval[1] + 1
             dimer_found = 0
             poses = []
             for pos, nt in enumerate(seq):
-                if lower_boundary < pos < uppper_boundary:
+                if lower_boundary < pos <= upper_boundary:
                     dimer = seq[pos - 1] + nt
                     if dimer.upper() in dimer_list:
                         seq = seq[:pos - 1] + dimer.upper() + seq[pos + 1:]
@@ -188,8 +209,10 @@ if version_info[1] < 6:
 
 parser = argparse.ArgumentParser(description='Performs the Python half of the XR-Seq analysis.')
 parser.add_argument('-s', '--sample_name', help='name of the sample without extensions')
-parser.add_argument('-m', '--min_length', type=int, default=10, help='Minimum oligomer length for monomer analysis.')
-parser.add_argument('-M', '--max_length', type=int, default=30, help='Maximum oligomer length for monomer analysis.')
+parser.add_argument('-m', '--min_length', type=int, help='Minimum allowed read length.')
+parser.add_argument('-M', '--max_length', type=int, help='Maximum allowed read length.')
+parser.add_argument('--mon_min', type=int, default=10, help='Minimum oligomer length for monomer analysis.')
+parser.add_argument('--mon_max', type=int, default=30, help='Maximum oligomer length for monomer analysis.')
 parser.add_argument('-p', '--pinpoint', action='store_true', help='Pinpoint damage sites')
 parser.add_argument('-d', '--dimers', help='Dimers to look for while pinpointing. Example: TC,CT Default: TT')
 parser.add_argument('-l', '--lower', default=9, type=int, help="Lower boundary for damage location, n bp away from 3' "
@@ -208,22 +231,38 @@ if args.dimers:
 else:
     dimers = ["TT"]
 
-mon_lenghts = list(range(args.min_length, args.max_length + 1))
+mon_lenghts = list(range(args.mon_min, args.mon_max + 1))
 
 if args.pinpoint:
     for sample in samples:
+        print("Pinpointing " + sample)
         pinpoint(sample, args.lower, args.upper, args.dimers)
     quit()
 
 for sample in samples:
     if str(sample + "_pinpointed.bed") in listdir():
+        print("Normalizing " + sample)
         rpkm(sample + "_pinpointed")
-        with open("results/" + sample + "_NTS_rpkm.bed") as score_test:
+        with open("results/" + sample + "_pinpointed_NTS_rpkm.bed") as score_test:
             if type(BedLine(score_test.readline()).score) == int:
-                calc_avg(sample + "_pinpointed")
+                calc_avg("/results" + sample + "_pinpointed")
+    elif str(sample + "_filtered.bed") in listdir():
+        print("Normalizing " + sample)
+        rpkm(sample + "_filtered")
+        with open("results/" + sample + "_filtered_NTS_rpkm.bed") as score_test:
+            if type(BedLine(score_test.readline()).score) == int:
+                calc_avg("/results" + sample + "_filtered")
     else:
+        print("Normalizing " + sample)
         rpkm(sample)
         with open("results/" + sample + "_NTS_rpkm.bed") as score_test:
             if type(BedLine(score_test.readline()).score) == int:
-                calc_avg(sample)
+                calc_avg("/results" + sample)
+
+    print("Performing monomer analysis on " + sample)
     monomer_analysis(sample, mon_lenghts)
+    if sample + '_pinpointed' in listdir():
+        monomer_analysis(sample + '_pinpointed', mon_lenghts)
+    elif sample + '_filtered' in listdir():
+        monomer_analysis(sample + '_filtered', mon_lenghts)
+
