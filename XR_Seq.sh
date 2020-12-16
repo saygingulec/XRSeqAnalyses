@@ -205,7 +205,7 @@ fi
 
 # Pinpoint damage sites
 
-if [ $PIN == "-p" ]; then
+if [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
     sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${PIN} ${DIMERS} ${LOWER} ${UPPER}"
   done
@@ -219,7 +219,7 @@ if [ -n "$WHOLE" ]; then
     sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="grep -c \"^\" ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_readCount.txt"
     sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="wc -l ${SAMPLE}_trimmed_sorted.bed >> results/total_mapped_reads.txt"
   done
-elif [ $PIN == "-p" ]; then
+elif [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
     sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="grep -c \"^\" ${SAMPLE}_pinpointed.bed > ${SAMPLE}_pinpointed_readCount.txt"
     sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="wc -l ${SAMPLE}_pinpointed.bed >> results/total_pinpointed_reads.txt"
@@ -241,7 +241,7 @@ fi
 
 # Generate TS and NTS read counts
 
-if [ $PIN == "-p" ]; then
+if [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
     sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_pinpointed.bed -wa -s -F 0.5 > ${SAMPLE}_pinpointed_NTS.bed"
     sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_pinpointed.bed -wa -S -F 0.5 > ${SAMPLE}_pinpointed_TS.bed"
@@ -261,7 +261,7 @@ fi
 
 # Generate BedGraph files
 
-if [ $PIN == "-p" ]; then
+if [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
     sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_filtered.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_pinpointed_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
     sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_filtered.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_pinpointed_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
@@ -297,7 +297,7 @@ done
 
 # Generate read length distribution table
 
-if [ $PIN == "-p" ]; then
+if [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
     sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="awk '{print length(\$4)}' ${SAMPLE}_pinpointed.bed | sort -k1,1n | uniq -c | sed 's/\s\s*/ /g' | awk '{print \$2\"\t\"\$1}' > results/${SAMPLE}_read_length_distribution_after_pinpointing.txt"
   done
