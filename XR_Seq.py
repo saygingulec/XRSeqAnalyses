@@ -88,7 +88,7 @@ def calc_avg(name):
                     bins[line.score] = []
                 bins[line.score].append(line.count)
 
-        out = 'results/' + rpkm_file[:-4] + '_rdg_averages.txt'
+        out = rpkm_file[:-4] + '_rdg_averages.txt'
         with open(out, 'a') as f:
             f.write("Bin\tAverage Read Count\n")
             for key, value in bins.items():
@@ -245,19 +245,22 @@ for sample in samples:
         rpkm(sample + "_pinpointed")
         with open("results/" + sample + "_pinpointed_NTS_rpkm.bed") as score_test:
             if type(BedLine(score_test.readline()).score) == int:
-                calc_avg("/results" + sample + "_pinpointed")
+                print("Calculating bin averages of " + sample)
+                calc_avg("results/" + sample + "_pinpointed")
     elif str(sample + "_filtered.bed") in listdir():
         print("Normalizing " + sample)
         rpkm(sample + "_filtered")
         with open("results/" + sample + "_filtered_NTS_rpkm.bed") as score_test:
             if type(BedLine(score_test.readline()).score) == int:
-                calc_avg("/results" + sample + "_filtered")
+                print("Calculating bin averages of " + sample)
+                calc_avg("results/" + sample + "_filtered")
     else:
         print("Normalizing " + sample)
         rpkm(sample)
         with open("results/" + sample + "_NTS_rpkm.bed") as score_test:
             if type(BedLine(score_test.readline()).score) == int:
-                calc_avg("/results" + sample)
+                print("Calculating bin averages of " + sample)
+                calc_avg("results/" + sample)
 
     print("Performing monomer analysis on " + sample)
     monomer_analysis(sample, mon_lenghts)

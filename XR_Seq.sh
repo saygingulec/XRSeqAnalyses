@@ -38,8 +38,6 @@ helpFunction()
    exit 1 # Exit script after printing help
 }
 
-MIN=1
-MON_MAX="$MAX"
 
 while [[ $# -gt 0 ]]; do
   key="$1"
@@ -65,6 +63,7 @@ while [[ $# -gt 0 ]]; do
           shift 2;;
       -M|--max_length)
           MAX="$2"
+          MON_MAX="-M $2"
           shift 2;;
       -w | --whole_sample)
           WHOLE="true"
@@ -148,7 +147,7 @@ done
 # Merging identical reads
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="fastx_collapser -v -i ${SAMPLE}_trimmed.fastq -o ${SAMPLE}_trimmed.fasta -Q33"
+  sbatch --mem=4g --dependency=singleton --job-name="${SAMPLE}" --wrap="fastx_collapser -v -i ${SAMPLE}_trimmed.fastq -o ${SAMPLE}_trimmed.fasta -Q33"
 done
 
 
