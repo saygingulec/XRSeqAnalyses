@@ -262,13 +262,13 @@ fi
 
 if [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_filtered.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_pinpointed_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_filtered.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_pinpointed_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_pinpointed.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_pinpointed_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_pinpointed.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_pinpointed_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
   done
 elif [[ -n "$MIN" ]] || [[ -n "$MAX" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_pinpointed.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_filtered_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_pinpointed.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_filtered_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_filtered.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_filtered_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_filtered.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_filtered_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
   done
 else
   for SAMPLE in "${SAMPLES[@]}"; do
