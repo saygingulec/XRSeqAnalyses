@@ -174,7 +174,7 @@ done
 
 # Filter by length
 
-if [[ -n "$MIN" ]] || [[ -n "$MAX" ]]; then
+if [[ -n "$MIN" ]] && [[ -n "$MAX" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
     sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="awk '{if(\$3-\$2>=$MIN && \$3-\$2<=$MAX){print}}' ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_filtered.bed"
   done
