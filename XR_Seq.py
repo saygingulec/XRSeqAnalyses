@@ -100,8 +100,6 @@ def monomer_analysis(name, desired_lengths=None):
     if desired_lengths is None:
         desired_lengths = list(range(10, 31))
 
-    print('Performing monomer analysis')
-
     dict_of_monomers = {
         length: {
             i + 1: {
@@ -116,6 +114,8 @@ def monomer_analysis(name, desired_lengths=None):
     # Count the number of monomers
     for entry in SeqIO.parse(fasta, 'fasta'):
         seq = entry.seq.upper()
+        if 'N' in seq:
+            continue
         length = len(seq)
         if length in desired_lengths:
             for pos, nt in enumerate(seq):
@@ -140,23 +140,26 @@ def monomer_analysis(name, desired_lengths=None):
                 for nt, ratio in dict_of_monomers[length][pos].items():
                     f.write(f'{length}\t{pos}\t{nt}\t{ratio}\n')
 
-
-def filter_by_length(sample_name, min_length=None, max_length=None):
-    bed = sample_name + '_trimmed_sorted.bed'
-    out = sample_name + '_filtered.bed'
-    with open(bed) as f, open(out, 'a') as d:
-        if min_length is not None and max_length is not None:
-            for line in f:
-                if min_length <= len(BedLine(line)) <= max_length:
-                    d.write(line)
-        elif max_length is not None:
-            for line in f:
-                if len(BedLine(line)) <= max_length:
-                    d.write(line)
-        elif min_length is not None:
-            for line in f:
-                if min_length <= len(BedLine(line)):
-                    d.write(line)
+    # Convert to human readable table and write
+    hr_table = 'results/' + fasta[:-3] + '_monomer_hr.txt'
+    with open(hr_table, 'a') as f:
+        f.write('\tA\tT\tG\tC\n1\t')
+        for length in dict_of_monomers:
+            for pos in dict_of_monomers[length]:
+                for nt, ratio in dict_of_monomers[length][pos].items():
+                    if pos == length:
+                        if nt == 'C':
+                            if length != desired_lengths[-1]:
+                                f.write(f'{ratio}\n\n\tA\tT\tG\tC\n1\t')
+                            else:
+                                f.write(f'{ratio}\n')
+                        else:
+                            f.write(f'{ratio}\t')
+                    else:
+                        if nt == 'C':
+                            f.write(f'{ratio}\n{pos+1}\t')
+                        else:
+                            f.write(f'{ratio}\t')
 
 
 def pinpoint(name, lower_boundary=9, upper_boundary=8, dimer_list=None):
@@ -204,11 +207,34 @@ def pinpoint(name, lower_boundary=9, upper_boundary=8, dimer_list=None):
                 d.write(f'{chrom}\t{start}\t{end}\t{seq}\t{dimer_found}\t{strand}\n')
 
 
+def gene_body_total_reads(name):
+    out = name + '_TS_NTS_rpkm.txt'
+    nts_bins = name + '_NTS_rpkm.bed'
+    ts_bins = name + '_TS_rpkm.bed'
+    genes = {}
+    with open(nts_bins) as f:
+        for line in f:
+            line = BedLine(line)
+            if line.name not in genes:
+                genes[line.name] = {'TS': 0, 'NTS': 0}
+            if 25 < line.score < 126:
+                genes[line.name]['NTS'] += line.count
+    with open(ts_bins) as f:
+        for line in f:
+            line = BedLine(line)
+            if 25 < line.score < 126:
+                genes[line.name]['TS'] += line.count
+    with open(out, 'a') as f:
+        f.write('Gene\tTS\tNTS\n')
+        for gene, rpkms in genes.items():
+            f.write(f'{gene}\t{rpkms["TS"]}\t{rpkms["NTS"]}\n')
+
+
 if version_info[1] < 6:
     raise Exception('Use at least Python 3.6!')
 
 parser = argparse.ArgumentParser(description='Performs the Python half of the XR-Seq analysis.')
-parser.add_argument('-s', '--sample_name', help='name of the sample without extensions')
+parser.add_argument('-s', '--sample_name', help='Name of the sample without extensions.')
 parser.add_argument('-m', '--min_length', type=int, help='Minimum allowed read length.')
 parser.add_argument('-M', '--max_length', type=int, help='Maximum allowed read length.')
 parser.add_argument('--mon_min', type=int, default=10, help='Minimum oligomer length for monomer analysis.')
@@ -219,13 +245,16 @@ parser.add_argument('-l', '--lower', default=9, type=int, help="Lower boundary f
                                                                "end. Default: 9")
 parser.add_argument('-u', '--upper', default=8, type=int, help="Upper boundary for damage location, n bp away from 3' "
                                                                "end. Default: 8")
+parser.add_argument('--ma', action='store_true', help='Perform monomer analysis.')
 args = parser.parse_args()
 
+# Collect sample names
 if args.sample_name:
     samples = [args.sample_name]
 else:
     samples = [i[:-19] for i in listdir() if '_trimmed_sorted.bed' in i]
 
+# Change defaults
 if args.dimers:
     dimers = [dimer.upper() for dimer in args.dimers.split(',')]
 else:
@@ -233,12 +262,25 @@ else:
 
 mon_lenghts = list(range(args.mon_min, args.mon_max + 1))
 
+# Only perform monomer analysis
+if args.ma:
+    for sample in samples:
+        print("Performing monomer analysis on " + sample)
+        monomer_analysis(sample, mon_lenghts)
+        if sample + '_pinpointed' in listdir():
+            monomer_analysis(sample + '_pinpointed', mon_lenghts)
+        elif sample + '_filtered' in listdir():
+            monomer_analysis(sample + '_filtered', mon_lenghts)
+    quit()
+
+# Pinpoint
 if args.pinpoint:
     for sample in samples:
         print("Pinpointing " + sample)
         pinpoint(sample, args.lower, args.upper, args.dimers)
     quit()
 
+# Calculate RPKM and averages for TCR graph, and perform monomer analysis
 for sample in samples:
     if str(sample + "_pinpointed.bed") in listdir():
         print("Normalizing " + sample)
@@ -247,6 +289,7 @@ for sample in samples:
             if type(BedLine(score_test.readline()).score) == int:
                 print("Calculating bin averages of " + sample)
                 calc_avg("results/" + sample + "_pinpointed")
+                gene_body_total_reads("results/" + sample + "_pinpointed")
     elif str(sample + "_filtered.bed") in listdir():
         print("Normalizing " + sample)
         rpkm(sample + "_filtered")
@@ -254,6 +297,7 @@ for sample in samples:
             if type(BedLine(score_test.readline()).score) == int:
                 print("Calculating bin averages of " + sample)
                 calc_avg("results/" + sample + "_filtered")
+                gene_body_total_reads("results/" + sample + "_filtered")
     else:
         print("Normalizing " + sample)
         rpkm(sample)
@@ -261,6 +305,7 @@ for sample in samples:
             if type(BedLine(score_test.readline()).score) == int:
                 print("Calculating bin averages of " + sample)
                 calc_avg("results/" + sample)
+                gene_body_total_reads("results/" + sample)
 
     print("Performing monomer analysis on " + sample)
     monomer_analysis(sample, mon_lenghts)
@@ -268,4 +313,3 @@ for sample in samples:
         monomer_analysis(sample + '_pinpointed', mon_lenghts)
     elif sample + '_filtered' in listdir():
         monomer_analysis(sample + '_filtered', mon_lenghts)
-
