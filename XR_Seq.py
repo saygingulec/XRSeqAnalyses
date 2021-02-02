@@ -1,3 +1,4 @@
+from math import log2
 from sys import version_info
 import argparse
 from os import listdir
@@ -216,18 +217,29 @@ def gene_body_total_reads(name):
         for line in f:
             line = BedLine(line)
             if line.name not in genes:
-                genes[line.name] = {'TS': 0, 'NTS': 0}
+                genes[line.name] = {'TS': 0.0, 'NTS': 0.0}
             if 25 < line.score < 126:
-                genes[line.name]['NTS'] += line.count
+                genes[line.name]['NTS'] += float(line.count)
     with open(ts_bins) as f:
         for line in f:
             line = BedLine(line)
             if 25 < line.score < 126:
-                genes[line.name]['TS'] += line.count
+                genes[line.name]['TS'] += float(line.count)
+    for gene in genes:
+        ts = genes[gene]['TS']
+        nts = genes[gene]['NTS']
+        if ts == 0:
+            ts = 1
+        if nts == 0:
+            nts = 1
+        ratio = ts / nts
+        lg2 = log2(ratio)
+        genes[gene]['ratio'] = ratio
+        genes[gene]['log2'] = lg2
     with open(out, 'a') as f:
-        f.write('Gene\tTS\tNTS\n')
-        for gene, rpkms in genes.items():
-            f.write(f'{gene}\t{rpkms["TS"]}\t{rpkms["NTS"]}\n')
+        f.write('Gene\tTS\tNTS\tRatio\tlog2\n')
+        for gene, numbers in sorted(genes.items(), key=lambda x: x[1]['log2'], reverse=True):
+            f.write(f'{gene}\t{numbers["TS"]}\t{numbers["NTS"]}\t{numbers["ratio"]}\t{numbers["log2"]}\n')
 
 
 if version_info[1] < 6:
