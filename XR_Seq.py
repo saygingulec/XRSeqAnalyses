@@ -216,15 +216,11 @@ def gene_body_total_reads(name):
     with open(nts_bins) as f:
         for line in f:
             line = BedLine(line)
-            if line.name not in genes:
-                genes[line.name] = {'TS': 0.0, 'NTS': 0.0}
-            if 25 < line.score < 126:
-                genes[line.name]['NTS'] += float(line.count)
+            genes[line.name]['NTS'] = float(line.count)
     with open(ts_bins) as f:
         for line in f:
             line = BedLine(line)
-            if 25 < line.score < 126:
-                genes[line.name]['TS'] += float(line.count)
+            genes[line.name]['TS'] = float(line.count)
     for gene in genes:
         ts = genes[gene]['TS']
         nts = genes[gene]['NTS']
@@ -298,25 +294,31 @@ for sample in samples:
         print("Normalizing " + sample)
         rpkm(sample + "_pinpointed")
         with open("results/" + sample + "_pinpointed_NTS_rpkm.bed") as score_test:
-            if type(BedLine(score_test.readline()).score) == int:
+            if type(BedLine(score_test.readline()).score) > 0:
                 print("Calculating bin averages of " + sample)
                 calc_avg("results/" + sample + "_pinpointed")
-                gene_body_total_reads("results/" + sample + "_pinpointed")
+            else:
+                print("Comparing TS-NTS")
+                gene_body_total_reads("results/" + sample)
     elif str(sample + "_filtered.bed") in listdir():
         print("Normalizing " + sample)
         rpkm(sample + "_filtered")
         with open("results/" + sample + "_filtered_NTS_rpkm.bed") as score_test:
-            if type(BedLine(score_test.readline()).score) == int:
+            if type(BedLine(score_test.readline()).score) > 0:
                 print("Calculating bin averages of " + sample)
                 calc_avg("results/" + sample + "_filtered")
-                gene_body_total_reads("results/" + sample + "_filtered")
+            else:
+                print("Comparing TS-NTS")
+                gene_body_total_reads("results/" + sample)
     else:
         print("Normalizing " + sample)
         rpkm(sample)
         with open("results/" + sample + "_NTS_rpkm.bed") as score_test:
-            if type(BedLine(score_test.readline()).score) == int:
+            if type(BedLine(score_test.readline()).score) > 0:
                 print("Calculating bin averages of " + sample)
                 calc_avg("results/" + sample)
+            else:
+                print("Comparing TS-NTS")
                 gene_body_total_reads("results/" + sample)
 
     print("Performing monomer analysis on " + sample)
