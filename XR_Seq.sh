@@ -140,35 +140,35 @@ module load python/3.6.6
 # Cutting the adapter with Cutadapt
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --job-name="${SAMPLE}" --wrap="cutadapt -a TGGAATTCTCGGGTGCCAAGGAACTCCAGTNNNNNNACGATCTCGTATGCCGTCTTCTGCTTG --discard-untrimmed -m 1 -o ${SAMPLE}_trimmed.fastq ${SAMPLE_DIR}/${SAMPLE}.fastq.gz"
+  sbatch --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-cutadapt.out" --wrap="cutadapt -a TGGAATTCTCGGGTGCCAAGGAACTCCAGTNNNNNNACGATCTCGTATGCCGTCTTCTGCTTG --discard-untrimmed -m 1 -o ${SAMPLE}_trimmed.fastq ${SAMPLE_DIR}/${SAMPLE}.fastq.gz"
 done
 
 
 # Merging identical reads
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --mem=4g --dependency=singleton --job-name="${SAMPLE}" --wrap="fastx_collapser -v -i ${SAMPLE}_trimmed.fastq -o ${SAMPLE}_trimmed.fasta -Q33"
+  sbatch --mem=4g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-fastx.out" --wrap="fastx_collapser -v -i ${SAMPLE}_trimmed.fastq -o ${SAMPLE}_trimmed.fasta -Q33"
 done
 
 
 # Genome alignment
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bowtie2 -x ${BOWTIE2_IND} -f ${SAMPLE}_trimmed.fasta -S ${SAMPLE}_trimmed.sam"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bowtie2.out" --wrap="bowtie2 -x ${BOWTIE2_IND} -f ${SAMPLE}_trimmed.fasta -S ${SAMPLE}_trimmed.sam"
 done
 
 
 # Convert to sorted BAM
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --mem=16g --dependency=singleton --job-name="${SAMPLE}" --wrap="samtools sort -o ${SAMPLE}_trimmed_sorted.bam ${SAMPLE}_trimmed.sam"
+  sbatch --mem=16g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-samtools_sort.out" --wrap="samtools sort -o ${SAMPLE}_trimmed_sorted.bam ${SAMPLE}_trimmed.sam"
 done
 
 
 # Convert to BED
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools bamtobed -i ${SAMPLE}_trimmed_sorted.bam > ${SAMPLE}_trimmed_sorted.bed"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bamtobed.out" --wrap="bedtools bamtobed -i ${SAMPLE}_trimmed_sorted.bam > ${SAMPLE}_trimmed_sorted.bed"
 done
 
 
@@ -176,15 +176,15 @@ done
 
 if [[ -n "$MIN" ]] && [[ -n "$MAX" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="awk '{if(\$3-\$2>=$MIN && \$3-\$2<=$MAX){print}}' ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_filtered.bed"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-length_filter.out" --wrap="awk '{if(\$3-\$2>=$MIN && \$3-\$2<=$MAX){print}}' ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_filtered.bed"
   done
 elif [[ -n "$MIN" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="awk '{if(\$3-\$2>=$MIN){print}}' ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_filtered.bed"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-length_filter.out" --wrap="awk '{if(\$3-\$2>=$MIN){print}}' ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_filtered.bed"
   done
 elif [[ -n "$MAX" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="awk '{if(\$3-\$2<=$MAX){print}}' ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_filtered.bed"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-length_filter.out" --wrap="awk '{if(\$3-\$2<=$MAX){print}}' ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_filtered.bed"
   done
 fi
 
@@ -192,12 +192,12 @@ fi
 # Get FASTA from BED
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools getfasta -s -fi ${GENOME} -bed ${SAMPLE}_trimmed_sorted.bed -fo ${SAMPLE}.fa"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-getfasta.out" --wrap="bedtools getfasta -s -fi ${GENOME} -bed ${SAMPLE}_trimmed_sorted.bed -fo ${SAMPLE}.fa"
 done
 
 if [[ -n "$MIN" ]] || [[ -n "$MAX" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools getfasta -s -fi ${GENOME} -bed ${SAMPLE}_filtered.bed -fo ${SAMPLE}_filtered.fa"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-getfasta.out" --wrap="bedtools getfasta -s -fi ${GENOME} -bed ${SAMPLE}_filtered.bed -fo ${SAMPLE}_filtered.fa"
   done
 fi
 
@@ -206,7 +206,7 @@ fi
 
 if [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${PIN} ${DIMERS} ${LOWER} ${UPPER}"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bowtie2.out" --output="slurm-%j-${SAMPLE}-pinpoint.out" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${PIN} ${DIMERS} ${LOWER} ${UPPER}"
   done
 fi
 
@@ -215,25 +215,25 @@ fi
 
 if [ -n "$WHOLE" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="grep -c \"^\" ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_readCount.txt"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="wc -l ${SAMPLE}_trimmed_sorted.bed >> results/total_mapped_reads.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-read_count.out" --wrap="grep -c \"^\" ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_readCount.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-total_mapped_reads.out" --wrap="wc -l ${SAMPLE}_trimmed_sorted.bed >> results/total_mapped_reads.txt"
   done
 elif [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="grep -c \"^\" ${SAMPLE}_pinpointed.bed > ${SAMPLE}_pinpointed_readCount.txt"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="wc -l ${SAMPLE}_pinpointed.bed >> results/total_pinpointed_reads.txt"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="wc -l ${SAMPLE}_trimmed_sorted.bed >> results/total_mapped_reads.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-read_count.out" --wrap="grep -c \"^\" ${SAMPLE}_pinpointed.bed > ${SAMPLE}_pinpointed_readCount.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-total_pinpointed_reads.out" --wrap="wc -l ${SAMPLE}_pinpointed.bed >> results/total_pinpointed_reads.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-total_mapped_reads.out" --wrap="wc -l ${SAMPLE}_trimmed_sorted.bed >> results/total_mapped_reads.txt"
   done
 elif [[ -n "$MIN" ]] || [[ -n "$MAX" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="grep -c \"^\" ${SAMPLE}_filtered.bed > ${SAMPLE}_filtered_readCount.txt"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="wc -l ${SAMPLE}_filtered.bed >> results/total_filtered_reads.txt"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="wc -l ${SAMPLE}_trimmed_sorted.bed >> results/total_mapped_reads.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-read_count.out" --wrap="grep -c \"^\" ${SAMPLE}_filtered.bed > ${SAMPLE}_filtered_readCount.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-total_filtered_reads.out" --wrap="wc -l ${SAMPLE}_filtered.bed >> results/total_filtered_reads.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-total_mapped_reads.out" --wrap="wc -l ${SAMPLE}_trimmed_sorted.bed >> results/total_mapped_reads.txt"
   done
 else
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="grep -c \"^\" ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_readCount.txt"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="wc -l ${SAMPLE}_trimmed_sorted.bed >> results/total_mapped_reads.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-read_count.out" --wrap="grep -c \"^\" ${SAMPLE}_trimmed_sorted.bed > ${SAMPLE}_readCount.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-total_mapped_reads.out" --wrap="wc -l ${SAMPLE}_trimmed_sorted.bed >> results/total_mapped_reads.txt"
   done
 fi
 
@@ -242,18 +242,18 @@ fi
 
 if [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_pinpointed.bed -wa -s -F 0.5 > ${SAMPLE}_pinpointed_NTS.bed"
-    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_pinpointed.bed -wa -S -F 0.5 > ${SAMPLE}_pinpointed_TS.bed"
+    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-intersect_NTS.out" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_pinpointed.bed -wa -s -F 0.5 > ${SAMPLE}_pinpointed_NTS.bed"
+    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-intersect_TS.out" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_pinpointed.bed -wa -S -F 0.5 > ${SAMPLE}_pinpointed_TS.bed"
   done
 elif [[ -n "$MIN" ]] || [[ -n "$MAX" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_filtered.bed -wa -s -F 0.5 > ${SAMPLE}_filtered_NTS.bed"
-    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_filtered.bed -wa -S -F 0.5 > ${SAMPLE}_filtered_TS.bed"
+    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-intersect_NTS.out" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_filtered.bed -wa -s -F 0.5 > ${SAMPLE}_filtered_NTS.bed"
+    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-intersect_TS.out" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_filtered.bed -wa -S -F 0.5 > ${SAMPLE}_filtered_TS.bed"
   done
 else
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -s -F 0.5 > ${SAMPLE}_NTS.bed"
-    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -S -F 0.5 > ${SAMPLE}_TS.bed"
+    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-intersect_NTS.out" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -s -F 0.5 > ${SAMPLE}_NTS.bed"
+    sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-intersect_TS.out" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -S -F 0.5 > ${SAMPLE}_TS.bed"
   done
 fi
 
@@ -262,18 +262,18 @@ fi
 
 if [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_pinpointed.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_pinpointed_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_pinpointed.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_pinpointed_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bedgraph_plus.out" --wrap="bedtools genomecov -i ${SAMPLE}_pinpointed.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_pinpointed_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bedgraph_minus.out" --wrap="bedtools genomecov -i ${SAMPLE}_pinpointed.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_pinpointed_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
   done
 elif [[ -n "$MIN" ]] || [[ -n "$MAX" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_filtered.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_filtered_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_filtered.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_filtered_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bedgraph_plus.out" --wrap="bedtools genomecov -i ${SAMPLE}_filtered.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_filtered_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bedgraph_minus.out" --wrap="bedtools genomecov -i ${SAMPLE}_filtered.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_filtered_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
   done
 else
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bedgraph_plus.out" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand + -scale \$(cat ${SAMPLE}_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_plus.bedGraph"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bedgraph_minus.out" --wrap="bedtools genomecov -i ${SAMPLE}_trimmed_sorted.bed -g ${GENOME}.fai -bg -strand - -scale \$(cat ${SAMPLE}_readCount.txt | awk '{print 10000000/\$1}') > ${SAMPLE}_minus.bedGraph"
   done
 fi
 
@@ -281,16 +281,16 @@ fi
 # Sort BedGraph files
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="sort -k1,1 -k2,2n ${SAMPLE}_plus.bedGraph > ${SAMPLE}_plus_sorted.bedGraph"
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="sort -k1,1 -k2,2n ${SAMPLE}_minus.bedGraph > ${SAMPLE}_minus_sorted.bedGraph"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bedgraph_plus_sort.out" --wrap="sort -k1,1 -k2,2n ${SAMPLE}_plus.bedGraph > ${SAMPLE}_plus_sorted.bedGraph"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bedgraph_minus_sort.out" --wrap="sort -k1,1 -k2,2n ${SAMPLE}_minus.bedGraph > ${SAMPLE}_minus_sorted.bedGraph"
 done
 
 
 # Generate BigWig files
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedGraphToBigWig ${SAMPLE}_plus_sorted.bedGraph ${GENOME}.fai results/${SAMPLE}_plus.bw"
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="bedGraphToBigWig ${SAMPLE}_minus_sorted.bedGraph ${GENOME}.fai results/${SAMPLE}_minus.bw"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bedGraphToBigWig_plus.out" --wrap="bedGraphToBigWig ${SAMPLE}_plus_sorted.bedGraph ${GENOME}.fai results/${SAMPLE}_plus.bw"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bedGraphToBigWig_minus.out" --wrap="bedGraphToBigWig ${SAMPLE}_minus_sorted.bedGraph ${GENOME}.fai results/${SAMPLE}_minus.bw"
 done
 
 
@@ -298,21 +298,21 @@ done
 
 if [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="awk '{print length(\$4)}' ${SAMPLE}_pinpointed.bed | sort -k1,1n | uniq -c | sed 's/\s\s*/ /g' | awk '{print \$2\"\t\"\$1}' > results/${SAMPLE}_read_length_distribution_after_pinpointing.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-lengt_dist_pinpointed.out" --wrap="awk '{print length(\$4)}' ${SAMPLE}_pinpointed.bed | sort -k1,1n | uniq -c | sed 's/\s\s*/ /g' | awk '{print \$2\"\t\"\$1}' > results/${SAMPLE}_read_length_distribution_after_pinpointing.txt"
   done
 elif [[ -n "$MIN" ]] || [[ -n "$MAX" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="awk '{print \$3-\$2}' ${SAMPLE}_filtered.bed | sort -k1,1n | uniq -c | sed 's/\s\s*/ /g' | awk '{print \$2\"\t\"\$1}' > results/${SAMPLE}_read_length_distribution_after_filtering.txt"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-lengt_dist_filtered.out" --wrap="awk '{print \$3-\$2}' ${SAMPLE}_filtered.bed | sort -k1,1n | uniq -c | sed 's/\s\s*/ /g' | awk '{print \$2\"\t\"\$1}' > results/${SAMPLE}_read_length_distribution_after_filtering.txt"
   done
 fi
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="awk '{print \$3-\$2}' ${SAMPLE}_trimmed_sorted.bed | sort -k1,1n | uniq -c | sed 's/\s\s*/ /g' | awk '{print \$2\"\t\"\$1}' > results/${SAMPLE}_read_length_distribution.txt"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-lengt_dist.out" --wrap="awk '{print \$3-\$2}' ${SAMPLE}_trimmed_sorted.bed | sort -k1,1n | uniq -c | sed 's/\s\s*/ /g' | awk '{print \$2\"\t\"\$1}' > results/${SAMPLE}_read_length_distribution.txt"
 done
 
 
 # Run Python scripts
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${MON_MIN} ${MON_MAX}"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-pyhton.out" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${MON_MIN} ${MON_MAX}"
 done
