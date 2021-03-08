@@ -299,7 +299,7 @@ for sample in samples:
                 calc_avg("results/" + sample + "_pinpointed")
             else:
                 print("Comparing TS-NTS")
-                gene_body_total_reads("results/" + sample)
+                gene_body_total_reads("results/" + sample + "_pinpointed")
     elif str(sample + "_filtered.bed") in listdir():
         print("Normalizing " + sample)
         rpkm(sample + "_filtered")
@@ -309,7 +309,7 @@ for sample in samples:
                 calc_avg("results/" + sample + "_filtered")
             else:
                 print("Comparing TS-NTS")
-                gene_body_total_reads("results/" + sample)
+                gene_body_total_reads("results/" + sample + "_filtered")
     else:
         print("Normalizing " + sample)
         rpkm(sample)
