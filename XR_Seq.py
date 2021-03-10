@@ -216,6 +216,7 @@ def gene_body_total_reads(name):
     with open(nts_bins) as f:
         for line in f:
             line = BedLine(line)
+            genes[line.name] = {}
             genes[line.name]['NTS'] = float(line.count)
     with open(ts_bins) as f:
         for line in f:
@@ -294,7 +295,7 @@ for sample in samples:
         print("Normalizing " + sample)
         rpkm(sample + "_pinpointed")
         with open("results/" + sample + "_pinpointed_NTS_rpkm.bed") as score_test:
-            if type(BedLine(score_test.readline()).score) > 0:
+            if BedLine(score_test.readline()).score > 0:
                 print("Calculating bin averages of " + sample)
                 calc_avg("results/" + sample + "_pinpointed")
             else:
@@ -304,7 +305,7 @@ for sample in samples:
         print("Normalizing " + sample)
         rpkm(sample + "_filtered")
         with open("results/" + sample + "_filtered_NTS_rpkm.bed") as score_test:
-            if type(BedLine(score_test.readline()).score) > 0:
+            if BedLine(score_test.readline()).score > 0:
                 print("Calculating bin averages of " + sample)
                 calc_avg("results/" + sample + "_filtered")
             else:
@@ -314,7 +315,7 @@ for sample in samples:
         print("Normalizing " + sample)
         rpkm(sample)
         with open("results/" + sample + "_NTS_rpkm.bed") as score_test:
-            if type(BedLine(score_test.readline()).score) > 0:
+            if BedLine(score_test.readline()).score > 0:
                 print("Calculating bin averages of " + sample)
                 calc_avg("results/" + sample)
             else:
