@@ -59,20 +59,20 @@ while [[ $# -gt 0 ]]; do
           shift 2;;
       -m|--min_length)
           MIN="$2"
-          MON_MIN="-m $2"
+          MON_MIN="--mon_min $2"
           shift 2;;
       -M|--max_length)
           MAX="$2"
-          MON_MAX="-M $2"
+          MON_MAX="--mon_max $2"
           shift 2;;
       -w | --whole_sample)
           WHOLE="true"
           shift 2;;
       --mon_min)
-          MON_MIN="-m $2"
+          MON_MIN="--mon_min $2"
           shift 2;;
       --mon_max)
-          MON_MAX="-M $2"
+          MON_MAX="--mon_max $2"
           shift 2;;
       -p|--pinpoint)
           PIN="-p"
