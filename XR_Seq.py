@@ -56,7 +56,10 @@ class BedLine:
 
 
 def rpkm(name):
-    read_count_file = name + "_readCount.txt"
+    if '_div' in name:
+        read_count_file = name[:-4] + "_readCount.txt"
+    else:
+        read_count_file = name + "_readCount.txt"
     with open(read_count_file) as f:
         read_count = int(f.readline().strip())
         nf = 10 ** 9 / read_count
@@ -289,7 +292,7 @@ if args.pinpoint:
         pinpoint(sample, args.lower, args.upper, args.dimers)
     quit()
 
-# Calculate RPKM and averages for TCR graph, and perform monomer analysis
+# Calculate RPKM, averages for TCR graph and log2 table, and perform monomer analysis
 for sample in samples:
     if str(sample + "_pinpointed.bed") in listdir():
         print("Normalizing " + sample)
@@ -328,3 +331,21 @@ for sample in samples:
         monomer_analysis(sample + '_pinpointed', mon_lenghts)
     elif sample + '_filtered' in listdir():
         monomer_analysis(sample + '_filtered', mon_lenghts)
+
+# If optional divided list is provided
+for sample in samples:
+    if str(sample + "_pinpointed_div_TS.bed") in listdir():
+        print("Normalizing divided list for" + sample)
+        rpkm(sample + "_pinpointed_div")
+        print("Calculating bin averages of " + sample)
+        calc_avg("results/" + sample + "_pinpointed_div")
+    elif str(sample + "_filtered_div_TS.bed") in listdir():
+        print("Normalizing " + sample)
+        rpkm(sample + "_filtered_div")
+        print("Calculating bin averages of " + sample)
+        calc_avg("results/" + sample + "_filtered_div")
+    elif str(sample + "_div_TS.bed") in listdir():
+        print("Normalizing " + sample)
+        rpkm(sample + "_div")
+        print("Calculating bin averages of " + sample + "_div")
+        calc_avg("results/" + sample + "_div")

@@ -15,6 +15,8 @@ helpFunction()
    echo -e "\t\tBowtie2Index. Example: Bowtie2Index/WBcel235"
    echo -e "\t-l | --gene_list"
    echo -e "\t\tGene list. Example: ce11_divided.bed"
+   echo -e "\t--div"
+   echo -e "\t\tOptional divided gene list. If you want to get both the TS-NTS log2 comparison table and the genome-wide TS-NTS comparison graph you can use this. Example: ce11_divided.bed"
    echo -e "\t-g | --genome"
    echo -e "\t\tGenome fasta. Example: ce11.fa"
    echo -e "\t-m | --min_length"
@@ -53,6 +55,9 @@ while [[ $# -gt 0 ]]; do
           shift 2;;
       -l|--gene_list)
           GENELIST="$2"
+          shift 2;;
+      --div)
+          DIV_GENELIST="$2"
           shift 2;;
       -g|--genome)
           GENOME="$2"
@@ -154,7 +159,7 @@ done
 # Genome alignment
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bowtie2.out" --wrap="bowtie2 -x ${BOWTIE2_IND} -f ${SAMPLE}_trimmed.fasta -S ${SAMPLE}_trimmed.sam"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bowtie2.out" --wrap="bowtie2 -x ${BOWTIE2_IND} -f ${SAMPLE}_trimmed.fasta -S ${SAMPLE}_trimmed.sam --very-sensitive"
 done
 
 
@@ -255,6 +260,25 @@ else
     sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-intersect_NTS.out" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -s -F 0.5 > ${SAMPLE}_NTS.bed"
     sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-intersect_TS.out" --wrap="bedtools intersect -c -a ${GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -S -F 0.5 > ${SAMPLE}_TS.bed"
   done
+fi
+
+if [ -n "$DIV_GENELIST" ]; then
+  if [ "$PIN" == "-p" ]; then
+    for SAMPLE in "${SAMPLES[@]}"; do
+      sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-div_intersect_NTS.out" --wrap="bedtools intersect -c -a ${DIV_GENELIST} -b ${SAMPLE}_pinpointed.bed -wa -s -F 0.5 > ${SAMPLE}_pinpointed_div_NTS.bed"
+      sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-div_intersect_TS.out" --wrap="bedtools intersect -c -a ${DIV_GENELIST} -b ${SAMPLE}_pinpointed.bed -wa -S -F 0.5 > ${SAMPLE}_pinpointed_div_TS.bed"
+    done
+  elif [[ -n "$MIN" ]] || [[ -n "$MAX" ]]; then
+    for SAMPLE in "${SAMPLES[@]}"; do
+      sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-div_intersect_NTS.out" --wrap="bedtools intersect -c -a ${DIV_GENELIST} -b ${SAMPLE}_filtered.bed -wa -s -F 0.5 > ${SAMPLE}_filtered_div_NTS.bed"
+      sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-div_intersect_TS.out" --wrap="bedtools intersect -c -a ${DIV_GENELIST} -b ${SAMPLE}_filtered.bed -wa -S -F 0.5 > ${SAMPLE}_filtered_div_TS.bed"
+    done
+  else
+    for SAMPLE in "${SAMPLES[@]}"; do
+      sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-div_intersect_NTS.out" --wrap="bedtools intersect -c -a ${DIV_GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -s -F 0.5 > ${SAMPLE}_div_NTS.bed"
+      sbatch --mem=32g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-div_intersect_TS.out" --wrap="bedtools intersect -c -a ${DIV_GENELIST} -b ${SAMPLE}_trimmed_sorted.bam -wa -S -F 0.5 > ${SAMPLE}_div_TS.bed"
+    done
+  fi
 fi
 
 
