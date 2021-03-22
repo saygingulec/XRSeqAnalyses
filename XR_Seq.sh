@@ -2,6 +2,10 @@
 
 # Monomer analysis includes the reads that were filtered out while pinpointing.
 
+# Command log
+echo bash "$0" "$@" > command_log.txt
+
+
 # Get options
 
 helpFunction()
