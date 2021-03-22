@@ -98,6 +98,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 
+# Checks
+
+if [ "${UPPER//[!0-9]/}" -gt "${LOWER//[!0-9]/}" ]; then
+    echo "Upper and lower boundaries are the number of nucleotides before the 3' end. The correct arguments would be: --upper ${LOWER//[!0-9]/} --lower ${UPPER//[!0-9]/}"
+    exit 1
+fi
+
+
 # Listing samples in an array
 
 SAMPLES=()
@@ -152,7 +160,7 @@ done
 # Merging identical reads
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --mem=4g --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-fastx.out" --wrap="fastx_collapser -v -i ${SAMPLE}_trimmed.fastq -o ${SAMPLE}_trimmed.fasta -Q33"
+  sbatch --mem=4g -t 120 --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-fastx.out" --wrap="fastx_collapser -v -i ${SAMPLE}_trimmed.fastq -o ${SAMPLE}_trimmed.fasta -Q33"
 done
 
 
