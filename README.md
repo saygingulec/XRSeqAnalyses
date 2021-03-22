@@ -16,6 +16,8 @@ Need help with the parameters?
                 Bowtie2Index. Example: Bowtie2Index/WBcel235
         -l | --gene_list
                 Gene list. Example: ce11_divided.bed
+        --div
+                Optional divided gene list. If you want to get both the TS-NTS log2 comparison table and the genome-wide TS-NTS comparison graph you can use this. Example: ce11_divided.bed
         -g | --genome
                 Genome fasta. Example: ce11.fa
         -m | --min_length
