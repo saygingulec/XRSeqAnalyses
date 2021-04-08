@@ -5,7 +5,6 @@
 # Command log
 echo bash "$0" "$@" > command_log.txt
 
-
 # Get options
 
 helpFunction()
