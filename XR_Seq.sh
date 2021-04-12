@@ -73,7 +73,7 @@ while [[ $# -gt 0 ]]; do
           MAX="$2"
           MON_MAX="--mon_max $2"
           shift 2;;
-      -w | --whole_sample)
+      -w|--whole_sample)
           WHOLE="true"
           shift 2;;
       --mon_min)
@@ -163,7 +163,7 @@ done
 # Merging identical reads
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --mem=4g -t 120 --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-fastx.out" --wrap="fastx_collapser -v -i ${SAMPLE}_trimmed.fastq -o ${SAMPLE}_trimmed.fasta -Q33"
+  sbatch --mem=8g -t 120 --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-fastx.out" --wrap="fastx_collapser -v -i ${SAMPLE}_trimmed.fastq -o ${SAMPLE}_trimmed.fasta -Q33"
 done
 
 
