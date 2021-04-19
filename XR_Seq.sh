@@ -152,6 +152,9 @@ module load ucsctools/320
 echo Loading Python 3.6.6
 module load python/3.6.6
 
+echo Loading R 4.0.3
+module load r/4.0.3
+
 
 # Cutting the adapter with Cutadapt
 
@@ -213,7 +216,7 @@ done
 
 if [[ -n "$MIN" ]] || [[ -n "$MAX" ]]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-getfasta.out" --wrap="bedtools getfasta -s -fi ${GENOME} -bed ${SAMPLE}_filtered.bed -fo ${SAMPLE}_filtered.fa"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-getfasta_filtered.out" --wrap="bedtools getfasta -s -fi ${GENOME} -bed ${SAMPLE}_filtered.bed -fo ${SAMPLE}_filtered.fa"
   done
 fi
 
@@ -350,4 +353,11 @@ done
 
 for SAMPLE in "${SAMPLES[@]}"; do
   sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-python.out" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${MON_MIN} ${MON_MAX}"
+done
+
+
+# Make graphs with R
+
+for SAMPLE in "${SAMPLES[@]}"; do
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-R.out" --wrap="Rscript XR_Seq.R ${SAMPLE}"
 done
