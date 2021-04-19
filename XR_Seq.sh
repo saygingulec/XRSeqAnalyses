@@ -359,5 +359,5 @@ done
 # Make graphs with R
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-R.out" --wrap="Rscript XR_Seq.R ${SAMPLE}"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-R.out" --wrap="Rscript --vanilla XR_Seq.R ${SAMPLE}"
 done
