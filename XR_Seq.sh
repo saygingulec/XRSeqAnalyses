@@ -103,9 +103,11 @@ done
 
 # Checks
 
-if [ "${UPPER//[!0-9]/}" -gt "${LOWER//[!0-9]/}" ]; then
-    echo "Upper and lower boundaries are the number of nucleotides before the 3' end. The correct arguments would be: --upper ${LOWER//[!0-9]/} --lower ${UPPER//[!0-9]/}"
-    exit 1
+if [[ -n "$UPPER" ]] && [[ -n "$LOWER" ]]; then
+  if [ "${UPPER//[!0-9]/}" -gt "${LOWER//[!0-9]/}" ]; then
+      echo "Upper and lower boundaries are the number of nucleotides before the 3' end. The correct arguments would be: --upper ${LOWER//[!0-9]/} --lower ${UPPER//[!0-9]/}"
+      exit 1
+  fi
 fi
 
 
@@ -225,7 +227,7 @@ fi
 
 if [ "$PIN" == "-p" ]; then
   for SAMPLE in "${SAMPLES[@]}"; do
-    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-bowtie2.out" --output="slurm-%j-${SAMPLE}-pinpoint.out" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${PIN} ${DIMERS} ${LOWER} ${UPPER}"
+    sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-pinpoint.out" --output="slurm-%j-${SAMPLE}-pinpoint.out" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${PIN} ${DIMERS} ${LOWER} ${UPPER}"
   done
 fi
 
