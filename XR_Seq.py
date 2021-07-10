@@ -258,6 +258,7 @@ parser.add_argument('-l', '--lower', default=9, type=int, help="Lower boundary f
 parser.add_argument('-u', '--upper', default=8, type=int, help="Upper boundary for damage location, n bp away from 3' "
                                                                "end. Default: 8")
 parser.add_argument('--ma', action='store_true', help='Perform monomer analysis.')
+parser.add_argument('--rpkm', action='store_true', help='Perform RPKM normalization.')
 args = parser.parse_args()
 
 # Collect sample names
@@ -283,6 +284,20 @@ if args.ma:
             monomer_analysis(sample + '_pinpointed', mon_lenghts)
         elif sample + '_filtered' in listdir():
             monomer_analysis(sample + '_filtered', mon_lenghts)
+    quit()
+
+# Only perform RPKM normalization
+if args.rpkm:
+    for sample in samples:
+        if str(sample + "_pinpointed.bed") in listdir():
+            print("Normalizing " + sample)
+            rpkm(sample + "_pinpointed")
+        elif str(sample + "_filtered.bed") in listdir():
+            print("Normalizing " + sample)
+            rpkm(sample + "_filtered")
+        else:
+            print("Normalizing " + sample)
+            rpkm(sample)
     quit()
 
 # Pinpoint
