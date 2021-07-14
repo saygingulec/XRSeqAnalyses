@@ -133,6 +133,9 @@ mkdir results
 
 echo Loading modules
 
+echo Loading fastqc
+module load fastqc
+
 echo Loading Bowtie2
 module load bowtie2
 
@@ -158,10 +161,15 @@ echo Loading R 4.0.3
 module load r/4.0.3
 
 
+# Quality control
+for SAMPLE in "${SAMPLES[@]}"; do
+  sbatch --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-fastqc.out" --wrap="fastqc ${SAMPLE_DIR}/${SAMPLE}.fastq.gz"
+done
+
 # Cutting the adapter with Cutadapt
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-cutadapt.out" --wrap="cutadapt -a TGGAATTCTCGGGTGCCAAGGAACTCCAGTNNNNNNACGATCTCGTATGCCGTCTTCTGCTTG --discard-untrimmed -m 1 -o ${SAMPLE}_trimmed.fastq ${SAMPLE_DIR}/${SAMPLE}.fastq.gz"
+  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-cutadapt.out" --wrap="cutadapt -a TGGAATTCTCGGGTGCCAAGGAACTCCAGTNNNNNNACGATCTCGTATGCCGTCTTCTGCTTG --discard-untrimmed -m 1 -o ${SAMPLE}_trimmed.fastq ${SAMPLE_DIR}/${SAMPLE}.fastq.gz"
 done
 
 
