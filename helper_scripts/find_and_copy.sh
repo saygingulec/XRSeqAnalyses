@@ -1,0 +1,1 @@
+find Cis/ CPD/ 6-4/ -name "*div*TS_rpkm.bed" -exec cp {} expression_tcr_graphs/ \;
