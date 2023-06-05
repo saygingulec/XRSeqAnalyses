@@ -362,7 +362,7 @@ done
 # Run Python scripts
 
 for SAMPLE in "${SAMPLES[@]}"; do
-  sbatch --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-python.out" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${MON_MIN} ${MON_MAX}"
+  sbatch -t 1-00:00:00 --dependency=singleton --job-name="${SAMPLE}" --output="slurm-%j-${SAMPLE}-python.out" --wrap="python3 XR_Seq.py -s ${SAMPLE} ${MON_MIN} ${MON_MAX}"
 done
 
 
